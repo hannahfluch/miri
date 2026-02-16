@@ -1,8 +1,16 @@
 [package]
 name = "miri"
 version = "0.1.0"
-edition = "2024"
+edition = "2026"
 
 [dependencies]
 clap = { version = "4.5.58", features = ["derive"] }
 niri-ipc = "25.11.0"
+
+[[bin]]
+name = "miri"
+path = "src/main.rs"
+
+[[bin]]
+name = "miri_service"
+path = "src/bin/miri_service.rs"
