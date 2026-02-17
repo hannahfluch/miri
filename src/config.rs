@@ -1,0 +1,73 @@
+use config::{Config, ConfigError, File};
+use serde::{Deserialize, Deserializer, Serialize};
+use std::path::{Path, PathBuf};
+
+use super::Mode;
+
+struct MiriDefaults;
+
+impl MiriDefaults {
+    const DEFAULT_WORKSPACE_MODE: Mode = Mode::Master;
+    const MASTER_WIDTH_PERCENTAGE: f64 = 50.0;
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MiriConfig {
+    #[serde(deserialize_with = "deserialize_mode")]
+    pub default_workspace_mode: Mode,
+    pub master_column_default_width_percentage: f64,
+}
+
+impl Default for MiriConfig {
+    fn default() -> Self {
+        Self {
+            default_workspace_mode: MiriDefaults::DEFAULT_WORKSPACE_MODE,
+            master_column_default_width_percentage: MiriDefaults::MASTER_WIDTH_PERCENTAGE,
+        }
+    }
+}
+
+impl MiriConfig {
+    pub fn load() -> Self {
+        let config_path = Self::default_config_path();
+        match Self::from_file(&config_path) {
+            Ok(config) => config,
+            Err(e) => {
+                eprintln!("Warning: failed to load {}: {}", config_path.display(), e);
+                eprintln!("Falling back to default configuration.");
+                Self::default()
+            }
+        }
+    }
+
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
+        let path = path.as_ref();
+        if !path.exists() {
+            return Ok(Self::default());
+        }
+        let config = Config::builder().add_source(File::from(path.to_path_buf())).build()?;
+        config.try_deserialize()
+    }
+
+    pub fn default_config_path() -> PathBuf {
+        match std::env::var("HOME") {
+            Ok(home) => PathBuf::from(home).join(".config").join("miri").join("config.toml"),
+            Err(_) => PathBuf::from(".config/miri/config.toml"),
+        }
+    }
+}
+
+fn deserialize_mode<'deserialize, D>(deserializer: D) -> Result<Mode, D::Error>
+where
+    D: Deserializer<'deserialize>,
+{
+    match Option::<String>::deserialize(deserializer)? {
+        Some(s) => match s.to_lowercase().as_str() {
+            "scroll" => Ok(Mode::Scroll),
+            "master" => Ok(Mode::Master),
+            _ => Ok(MiriDefaults::DEFAULT_WORKSPACE_MODE),
+        },
+        None => Ok(MiriDefaults::DEFAULT_WORKSPACE_MODE),
+    }
+}

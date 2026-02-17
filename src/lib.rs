@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
+
+pub mod config;
+
 pub const MIRI_SOCKET_PATH: &str = "/tmp/modal-niri.sock";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -75,7 +78,7 @@ pub enum MiriGet {
     OtherThing,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Mode {
     Scroll,
     Master,
@@ -105,6 +108,7 @@ impl Default for Mode {
 
 pub struct WorkspaceModes {
     // output name and index used as key
+    // FIXME: solve case of output name being the same
     modes: HashMap<(String, u8), Mode>,
 }
 
