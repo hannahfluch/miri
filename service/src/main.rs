@@ -1,16 +1,13 @@
-use common::{Command, IPCMessage, IPCMessageContainer, MIRI_SOCKET_PATH, MiriAction, MiriGet, WorkspaceModes};
+use common::config::MiriConfig;
+use common::{Command, IPCMessage, IPCMessageContainer, MIRI_SOCKET_PATH, MiriAction, MiriGet, Mode};
 use niri_ipc::state::{EventStreamState, EventStreamStatePart};
 use niri_ipc::{Request, socket::Socket};
-use service::niri_ipc_utils::get_focused_workspace;
+use service::niri_ipc_utils::{get_focused_workspace_mode, window_is_new};
+use service::service_state::ServiceState;
 use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
-
-#[derive(Default)]
-struct ServiceState {
-    workspace_modes: WorkspaceModes,
-}
 
 trait CliRunner {
     fn run(
@@ -45,31 +42,12 @@ impl CliRunner for MiriAction {
         match self {
             MiriAction::CycleFocusedWorkspaceMode => {
                 println!("[ACTION]: CycleFocusedWorkspaceMode");
-                let event_state = event_state.read().expect("Failed to get read lock on event_state");
+                let event_state = event_state.read().expect("Could not get read lock on event_state");
+                let mut service_state = service_state.lock().expect("Could not get lock for service state");
 
-                let Some(workspace) = get_focused_workspace(&event_state) else {
-                    eprintln!("No focused workspace was found");
-                    return;
-                };
-
-                // workspace is now evaluated has having a value
-                println!("focused workspace on {:?}", workspace);
-
-                let Some(output) = workspace.output.as_ref() else {
-                    eprintln!("Focused workspace had no output");
-                    return;
-                };
-
-                println!("focused workspace on {:?}", workspace.output);
-
-                let mut service_state = service_state.lock().expect("Failed to get lock for service state");
-
-                service_state.workspace_modes.cycle_mode(output, workspace.idx);
-
-                println!(
-                    "mode {}",
-                    service_state.workspace_modes.get_mode(output, workspace.idx).as_str()
-                )
+                service_state
+                    .workspace_modes
+                    .cycle_mode_on_focused_workspace(&event_state);
             }
             MiriAction::Spawn => {
                 println!("[ACTION]: Spawn");
@@ -141,13 +119,15 @@ fn main() {
         Socket::connect().expect("Failed to connect to niri_ipc action socket"),
     ));
 
+    let config = MiriConfig::load();
+
     let event_state = Arc::new(RwLock::new(EventStreamState::default()));
     let service_state = Arc::new(Mutex::new(ServiceState::default()));
 
     let event_state_clone = event_state.clone();
     let service_state_clone = service_state.clone();
     thread::spawn(move || {
-        event_loop(event_state_clone, service_state_clone);
+        event_loop(event_state_clone, service_state_clone, config);
     });
 
     // accept cli socket connections on main thread
@@ -168,7 +148,11 @@ fn main() {
     }
 }
 
-fn event_loop(event_state: Arc<RwLock<EventStreamState>>, _service_state: Arc<Mutex<ServiceState>>) {
+fn handle_master_window_open(config: &MiriConfig) {
+    println!("{}", config.master_column_default_width_percentage);
+}
+
+fn event_loop(event_state: Arc<RwLock<EventStreamState>>, service_state: Arc<Mutex<ServiceState>>, config: MiriConfig) {
     let mut event_socket = Socket::connect().expect("Failed to connect to niri_ipc event socket");
 
     if let Err(e) = event_socket.send(Request::EventStream) {
@@ -182,14 +166,31 @@ fn event_loop(event_state: Arc<RwLock<EventStreamState>>, _service_state: Arc<Mu
         // FIXME: this is not a good way to handle this lol
         let event = read_next().expect("Failed to read event");
 
+        let mut local_event_state = event_state.write().expect("Coudl not hold lock on event state");
+
         match &event {
             niri_ipc::Event::WindowOpenedOrChanged { window } => {
-                println!("[EVENT]: window opened or changed");
-                let local_event_state = event_state.read().expect("Could not hold lock on event_state");
-                if service::niri_ipc_utils::window_is_new(&window.id, &local_event_state) {
-                    println!("window opened");
+                if window_is_new(&window.id, &local_event_state) {
+                    println!("[EVENT]: window opened");
+                    let local_service_state = service_state.lock().expect("Could not hold lock on service state");
+
+                    let Some(current_mode) =
+                        get_focused_workspace_mode(&local_service_state.workspace_modes, &local_event_state)
+                    else {
+                        eprintln!("Could not get focused workspace mode");
+                        local_event_state.apply(event);
+                        continue;
+                    };
+
+                    match current_mode {
+                        Mode::Master => handle_master_window_open(&config),
+                        Mode::Scroll => {
+                            local_event_state.apply(event);
+                            continue;
+                        }
+                    }
                 } else {
-                    println!("window changed");
+                    println!("[EVENT]: window changed");
                 }
             }
             niri_ipc::Event::WindowClosed { id: _ } => {
@@ -201,9 +202,6 @@ fn event_loop(event_state: Arc<RwLock<EventStreamState>>, _service_state: Arc<Mu
             _ => {}
         }
 
-        let mut state = event_state
-            .write()
-            .expect("Failed to acquire write lock on event state");
-        state.apply(event);
+        local_event_state.apply(event);
     }
 }

@@ -1,6 +1,5 @@
 use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 pub mod config;
 
@@ -81,41 +80,5 @@ impl Mode {
 impl Default for Mode {
     fn default() -> Self {
         Mode::Scroll
-    }
-}
-
-pub struct WorkspaceModes {
-    // output name and index used as key
-    // FIXME: solve case of output name being the same
-    modes: HashMap<(String, u8), Mode>,
-}
-
-impl WorkspaceModes {
-    pub fn new() -> Self {
-        WorkspaceModes { modes: HashMap::new() }
-    }
-
-    pub fn get_mode(&self, output: &str, index: u8) -> Mode {
-        self.modes
-            .get(&(output.to_string(), index))
-            .copied()
-            .unwrap_or_default()
-    }
-
-    pub fn set_mode(&mut self, output: &str, index: u8, mode: Mode) {
-        self.modes.insert((output.to_string(), index), mode);
-    }
-
-    pub fn cycle_mode(&mut self, output: &str, index: u8) -> Mode {
-        let current = self.get_mode(output, index);
-        let new_mode = current.cycle();
-        self.set_mode(output, index, new_mode);
-        new_mode
-    }
-}
-
-impl Default for WorkspaceModes {
-    fn default() -> Self {
-        Self::new()
     }
 }
