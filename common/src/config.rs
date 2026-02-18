@@ -9,6 +9,7 @@ struct MiriDefaults;
 impl MiriDefaults {
     const DEFAULT_WORKSPACE_MODE: Mode = Mode::Master;
     const MASTER_WIDTH_PERCENTAGE: f64 = 50.0;
+    const MASTER_MAXIMIZE_SINGLE_WINDOW: bool = true;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +18,7 @@ pub struct MiriConfig {
     #[serde(deserialize_with = "deserialize_mode")]
     pub default_workspace_mode: Mode,
     pub master_column_default_width_percentage: f64,
+    pub master_maximize_single_window: bool,
 }
 
 impl Default for MiriConfig {
@@ -24,6 +26,7 @@ impl Default for MiriConfig {
         Self {
             default_workspace_mode: MiriDefaults::DEFAULT_WORKSPACE_MODE,
             master_column_default_width_percentage: MiriDefaults::MASTER_WIDTH_PERCENTAGE,
+            master_maximize_single_window: MiriDefaults::MASTER_MAXIMIZE_SINGLE_WINDOW,
         }
     }
 }
