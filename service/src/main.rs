@@ -1,7 +1,7 @@
-use miri::{Command, MIRI_SOCKET_PATH, WorkspaceModes};
-use niri_ipc::Workspace;
+use common::{Command, IPCMessage, IPCMessageContainer, MIRI_SOCKET_PATH, MiriAction, MiriGet, WorkspaceModes};
 use niri_ipc::state::{EventStreamState, EventStreamStatePart};
 use niri_ipc::{Request, socket::Socket};
+use service::niri_ipc_utils::get_focused_workspace;
 use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::{Arc, Mutex, RwLock};
@@ -35,7 +35,7 @@ impl CliRunner for Command {
     }
 }
 
-impl CliRunner for miri::MiriAction {
+impl CliRunner for MiriAction {
     fn run(
         &self,
         _action_socket: Arc<Mutex<Socket>>,
@@ -43,7 +43,7 @@ impl CliRunner for miri::MiriAction {
         service_state: Arc<Mutex<ServiceState>>,
     ) {
         match self {
-            miri::MiriAction::CycleFocusedWorkspaceMode => {
+            MiriAction::CycleFocusedWorkspaceMode => {
                 println!("[ACTION]: CycleFocusedWorkspaceMode");
                 let event_state = event_state.read().expect("Failed to get read lock on event_state");
 
@@ -51,6 +51,9 @@ impl CliRunner for miri::MiriAction {
                     eprintln!("No focused workspace was found");
                     return;
                 };
+
+                // workspace is now evaluated has having a value
+                println!("focused workspace on {:?}", workspace);
 
                 let Some(output) = workspace.output.as_ref() else {
                     eprintln!("Focused workspace had no output");
@@ -68,14 +71,14 @@ impl CliRunner for miri::MiriAction {
                     service_state.workspace_modes.get_mode(output, workspace.idx).as_str()
                 )
             }
-            miri::MiriAction::Spawn => {
+            MiriAction::Spawn => {
                 println!("[ACTION]: Spawn");
             }
         }
     }
 }
 
-impl CliRunner for miri::MiriGet {
+impl CliRunner for MiriGet {
     fn run(
         &self,
         _action_socket: Arc<Mutex<Socket>>,
@@ -83,10 +86,10 @@ impl CliRunner for miri::MiriGet {
         _service_state: Arc<Mutex<ServiceState>>,
     ) {
         match self {
-            miri::MiriGet::FocusedWorkspaceMode => {
+            MiriGet::FocusedWorkspaceMode => {
                 println!("[GET]: FocusedWorkspaceMode");
             }
-            miri::MiriGet::OtherThing => {
+            MiriGet::OtherThing => {
                 println!("[GET]: OtherThing");
             }
         }
@@ -109,9 +112,9 @@ fn handle_cli(
                     continue;
                 }
 
-                match serde_json::from_str::<miri::IPCMessageContainer>(command_str) {
+                match serde_json::from_str::<IPCMessageContainer>(command_str) {
                     Ok(container) => match container.message {
-                        miri::IPCMessage::CliExecute(command) => {
+                        IPCMessage::CliExecute(command) => {
                             command.run(action_socket.clone(), event_state.clone(), service_state.clone());
                         }
                     },
@@ -126,10 +129,6 @@ fn handle_cli(
             }
         }
     }
-}
-
-fn get_focused_workspace(event_state: &EventStreamState) -> Option<&Workspace> {
-    event_state.workspaces.workspaces.values().find(|ws| ws.is_focused)
 }
 
 fn main() {
@@ -184,8 +183,14 @@ fn event_loop(event_state: Arc<RwLock<EventStreamState>>, _service_state: Arc<Mu
         let event = read_next().expect("Failed to read event");
 
         match &event {
-            niri_ipc::Event::WindowOpenedOrChanged { window: _ } => {
+            niri_ipc::Event::WindowOpenedOrChanged { window } => {
                 println!("[EVENT]: window opened or changed");
+                let local_event_state = event_state.read().expect("Could not hold lock on event_state");
+                if service::niri_ipc_utils::window_is_new(&window.id, &local_event_state) {
+                    println!("window opened");
+                } else {
+                    println!("window changed");
+                }
             }
             niri_ipc::Event::WindowClosed { id: _ } => {
                 println!("[EVENT]: window closed");

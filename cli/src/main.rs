@@ -1,5 +1,6 @@
 use clap::Parser;
-use miri::{Args, Command, MiriAction, MiriGet, config::MiriConfig};
+use cli::miri_commands::*;
+use common::{Args, Command, MiriAction, MiriGet, config::MiriConfig};
 use niri_ipc::{Request, socket::Socket};
 
 trait CliRunner {
@@ -19,7 +20,7 @@ impl CliRunner for MiriAction {
     fn run(&self, mut _niri_ipc: Socket) {
         match self {
             MiriAction::CycleFocusedWorkspaceMode => {
-                miri::send_command_to_miri_service(Command::Action {
+                send_command_to_miri_service(Command::Action {
                     action: MiriAction::CycleFocusedWorkspaceMode,
                 });
             }
@@ -32,7 +33,7 @@ impl CliRunner for MiriGet {
     fn run(&self, mut niri_ipc: Socket) {
         match self {
             MiriGet::FocusedWorkspaceMode => {
-                miri::send_command_to_miri_service(Command::Get {
+                send_command_to_miri_service(Command::Get {
                     get: MiriGet::FocusedWorkspaceMode,
                 });
                 match niri_ipc.send(Request::Workspaces) {
