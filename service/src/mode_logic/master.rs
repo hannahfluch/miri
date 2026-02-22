@@ -20,6 +20,7 @@ pub fn handle_master_window_open(
         eprintln!("Could not get windows on focused workspace");
         return;
     };
+
     let window_count = windows.iter().filter(|window| !window.is_floating).count();
 
     // FIXME: need to see if this is performant or not
@@ -107,6 +108,7 @@ pub fn handle_master_window_open(
 }
 
 pub fn handle_master_window_close(
+    closed_id: u64,
     service_state: &ServiceState,
     event_state: &EventStreamState,
     action_socket: &mut Socket,
@@ -117,30 +119,66 @@ pub fn handle_master_window_close(
         return;
     };
 
-    let window_count = windows.len() - 1;
-    if window_count != 1 {
-        return;
+    let window_count = windows.len();
+    if window_count == 2 {
+        let Some(&left_window) = windows
+            .iter()
+            .find(|window| window.layout.pos_in_scrolling_layout.is_some_and(|(x, _)| x == 1))
+        else {
+            eprintln!("Getting left-most window returned none");
+            return;
+        };
+
+        if service_state.config.master_maximize_single_window {
+            println!("only 1!!!!");
+
+            let full_screen_action = Action::SetWindowWidth {
+                id: Some(left_window.id),
+                change: niri_ipc::SizeChange::SetProportion(100.0),
+            };
+            action_socket
+                .send(Request::Action(full_screen_action))
+                .expect("Could not make single window full width")
+                .expect("msg");
+        }
     }
 
-    let Some(&last_window) = windows
-        .iter()
-        .find(|window| window.layout.pos_in_scrolling_layout.is_some_and(|(x, _)| x == 1))
-    else {
-        eprintln!("Getting left-most window returned none");
-        return;
-    };
-
-    if service_state.config.master_maximize_single_window {
-        println!("only 1!!!!");
-
-        let full_screen_action = Action::SetWindowWidth {
-            id: Some(last_window.id),
-            change: niri_ipc::SizeChange::SetProportion(100.0),
+    if window_count > 2 {
+        let Some(&left_window) = windows.iter().find(|window| {
+            window
+                .layout
+                .pos_in_scrolling_layout
+                .is_some_and(|(x, _)| x == 1 && window.id == closed_id)
+        }) else {
+            eprintln!("Getting left-most window returned none");
+            return;
         };
-        action_socket
-            .send(Request::Action(full_screen_action))
-            .expect("Could not make single window full width")
-            .expect("msg");
+
+        if left_window.id == closed_id {
+            let Some(&top_child_window) = windows.iter().find(|window| {
+                window
+                    .layout
+                    .pos_in_scrolling_layout
+                    .is_some_and(|(_, y)| y == 1 && window.id != closed_id)
+            }) else {
+                eprintln!("Could not find top window in child column");
+                return;
+            };
+
+            let expel_action = Action::ConsumeOrExpelWindowLeft {
+                id: Some(top_child_window.id),
+            };
+            action_socket
+                .send(Request::Action(expel_action))
+                .expect("Could not expel child window left")
+                .expect("msg");
+
+            let focus_action = Action::FocusColumnLeft {};
+            action_socket
+                .send(Request::Action(focus_action))
+                .expect("Could focus left column")
+                .expect("msg");
+        }
     }
 }
 

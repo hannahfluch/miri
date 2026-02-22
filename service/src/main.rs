@@ -152,7 +152,7 @@ fn handle_niri_event(
                 println!("[EVENT]: window changed");
             }
         }
-        niri_ipc::Event::WindowClosed { id: _ } => {
+        niri_ipc::Event::WindowClosed { id } => {
             println!("[EVENT]: window closed");
             let Some(current_mode) = get_focused_workspace_mode(&service_state.workspace_modes, event_state) else {
                 eprintln!("Could not get focused workspace mode");
@@ -160,7 +160,7 @@ fn handle_niri_event(
                 return;
             };
             match current_mode {
-                Mode::Master => handle_master_window_close(service_state, event_state, action_socket),
+                Mode::Master => handle_master_window_close(id, service_state, event_state, action_socket),
                 Mode::Scroll => {
                     event_state.apply(event);
                     return;
