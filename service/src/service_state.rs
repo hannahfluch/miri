@@ -58,24 +58,25 @@ impl WorkspaceModes {
         self.set_mode(output, focused_workspace.idx, mode);
     }
 
-    pub fn cycle_mode(&mut self, output: &str, index: u8) {
+    pub fn cycle_mode(&mut self, output: &str, index: u8) -> Mode {
         let current_mode = self.get_mode(output, index);
 
         let new_mode = current_mode.cycle();
         self.set_mode(output, index, new_mode);
+        new_mode
     }
 
-    pub fn cycle_mode_on_focused_workspace(&mut self, event_state: &EventStreamState) {
+    pub fn cycle_mode_on_focused_workspace(&mut self, event_state: &EventStreamState) -> Option<Mode> {
         let Some(focused_workspace) = get_focused_workspace(event_state) else {
             eprintln!("Failed to get focused workspace");
-            return;
+            return None;
         };
 
         let Some(output) = focused_workspace.output.as_ref() else {
             eprintln!("Focused workspace has no output");
-            return;
+            return None;
         };
 
-        self.cycle_mode(output, focused_workspace.idx);
+        Some(self.cycle_mode(output, focused_workspace.idx))
     }
 }

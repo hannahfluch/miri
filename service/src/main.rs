@@ -34,9 +34,23 @@ impl CliRunner for MiriAction {
             MiriAction::CycleFocusedWorkspaceMode => {
                 println!("[ACTION]: CycleFocusedWorkspaceMode");
 
-                service_state
+                let Some(new_mode) = service_state
                     .workspace_modes
-                    .cycle_mode_on_focused_workspace(&event_state);
+                    .cycle_mode_on_focused_workspace(&event_state)
+                else {
+                    eprintln!("Could not get new mode when cycling focused workspace mode");
+                    return;
+                };
+                let Some(workspace_windows) = get_windows_on_focused_workspace(event_state) else {
+                    eprintln!("Could not get workspace windows");
+                    return;
+                };
+                force_workspace_windows_into_layout_mode(
+                    workspace_windows,
+                    action_socket,
+                    &service_state.config,
+                    new_mode,
+                )
             }
             MiriAction::SetFocusedWorkspaceMode { mode } => {
                 println!("[ACTION]: SetFocusedWorkspaceMode to {:?}", mode);
@@ -140,7 +154,18 @@ fn handle_niri_event(
         }
         niri_ipc::Event::WindowClosed { id: _ } => {
             println!("[EVENT]: window closed");
-            handle_master_window_close(service_state, event_state, action_socket)
+            let Some(current_mode) = get_focused_workspace_mode(&service_state.workspace_modes, event_state) else {
+                eprintln!("Could not get focused workspace mode");
+                event_state.apply(event);
+                return;
+            };
+            match current_mode {
+                Mode::Master => handle_master_window_close(service_state, event_state, action_socket),
+                Mode::Scroll => {
+                    event_state.apply(event);
+                    return;
+                }
+            }
         }
         niri_ipc::Event::WindowsChanged { windows: _ } => {
             println!("[EVENT]: windows changed");
@@ -175,6 +200,7 @@ async fn main() {
     }
 }
 
+// FIXME: expect in here is really not a good pattern. we don't want this program to crash just because we were unable to make a window fullscreen for example. (or do we?)
 fn handle_master_window_open(
     service_state: &ServiceState,
     new_window: &Window,
@@ -213,7 +239,6 @@ fn handle_master_window_open(
         return;
     };
 
-    // FIXME: this works, but there are technically 2 focused windows in `all_windows` since it contains the previous state and the new window
     let move_into_child_column = if leftmost_window.is_focused {
         Action::ConsumeOrExpelWindowRight {
             id: Some(new_window.id),
@@ -228,6 +253,38 @@ fn handle_master_window_open(
         .send(Request::Action(move_into_child_column))
         .expect("Could move new window into child column")
         .expect("msg");
+
+    // if we are focusing the child column, move the new window directly under the focused window
+    if !leftmost_window.is_focused {
+        let Some(focused_window) = windows.iter().find(|w| w.is_focused) else {
+            eprintln!("Could not find focused window");
+            return;
+        };
+
+        let Some((_, focused_y)) = focused_window.layout.pos_in_scrolling_layout else {
+            eprintln!("Focused window has no scrolling layout position");
+            return;
+        };
+
+        // we can assume window count is itself - 2 since we have already checked if there are more than 1 windows. `-2` because we added the new window to this already. i dont like this line lol
+        let child_column_count = window_count - 2;
+
+        let focus_action = Action::FocusWindow { id: new_window.id };
+        action_socket
+            .send(Request::Action(focus_action))
+            .expect("Could not focus new window")
+            .expect("msg");
+
+        // example: 4 windows in child column, focused window is at position 2 (1 based indexing). 4 - 2 = 2, move window up twice to be directly under the focused window
+        let moves_needed = child_column_count.saturating_sub(focused_y);
+
+        for _ in 0..moves_needed {
+            action_socket
+                .send(Request::Action(Action::MoveWindowUp {}))
+                .expect("Could not move window up")
+                .expect("msg");
+        }
+    }
 
     let set_master_proportion = Action::SetWindowWidth {
         id: Some(leftmost_window.id),
@@ -256,8 +313,11 @@ fn handle_master_window_close(
         return;
     }
 
-    let Some(&last_window) = windows.get(0) else {
-        eprintln!("Getting index 0 on windows when there was 1 window left returned none");
+    let Some(&last_window) = windows
+        .iter()
+        .find(|window| window.layout.pos_in_scrolling_layout.is_some_and(|(x, _)| x == 1))
+    else {
+        eprintln!("Getting left-most window returned none");
         return;
     };
 
