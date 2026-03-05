@@ -34,7 +34,10 @@ impl CliRunner for MiriAction {
         match self {
             MiriAction::CycleFocusedWorkspaceMode => {
                 println!("[ACTION]: CycleFocusedWorkspaceMode");
-                let focused_workspace = service_state.current_layout.get_focused_workspace_mut();
+                let focused_workspace = service_state
+                    .current_layout
+                    .get_focused_workspace_mut()
+                    .expect("Could not get current focused workspace");
                 focused_workspace.mode.cycle();
                 let Some(workspace_windows) = get_windows_on_focused_workspace(event_state) else {
                     eprintln!("Could not get workspace windows");
@@ -125,11 +128,18 @@ fn handle_niri_event(
     // TODO: find a way to not have to clone the event
     event_state.apply(event.clone());
     // FIXME: dont make this pass by reference, just have it move the value out
-    copy_event_state_to_layout(event_state, &mut service_state.current_layout);
+    copy_event_state_to_layout(
+        event_state,
+        &service_state.previous_layout,
+        &mut service_state.current_layout,
+    );
 
     match event {
         niri_ipc::Event::WindowOpenedOrChanged { ref window } => {
-            let workspace = service_state.current_layout.get_focused_workspace();
+            let workspace = service_state
+                .current_layout
+                .get_focused_workspace()
+                .expect("Could not get current focused workspace");
             let current_mode = workspace.mode;
 
             if window_is_new(&window.id, service_state) {
@@ -145,8 +155,16 @@ fn handle_niri_event(
                 println!("[EVENT]: window changed");
                 match current_mode {
                     Mode::Master => 'early: {
-                        let window_moved_into_workspace = service_state.previous_layout.get_focused_workspace().id
-                            != service_state.current_layout.get_focused_workspace().id;
+                        let window_moved_into_workspace = service_state
+                            .previous_layout
+                            .get_focused_workspace()
+                            .expect("Could not get previous focused workspace")
+                            .id
+                            != service_state
+                                .current_layout
+                                .get_focused_workspace()
+                                .expect("Could not get current focused workspace")
+                                .id;
 
                         if window_moved_into_workspace {
                             handle_master_window_open(service_state, window, action_socket)
@@ -161,7 +179,10 @@ fn handle_niri_event(
         }
         niri_ipc::Event::WindowClosed { id } => {
             println!("[EVENT]: window closed");
-            let workspace = service_state.current_layout.get_focused_workspace();
+            let workspace = service_state
+                .current_layout
+                .get_focused_workspace()
+                .expect("Could not get current focused workspace");
             let current_mode = workspace.mode;
             match current_mode {
                 Mode::Master => handle_master_window_close(id, service_state, action_socket),

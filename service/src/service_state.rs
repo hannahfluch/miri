@@ -33,22 +33,20 @@ impl Layout {
         }
     }
 
-    pub fn get_focused_workspace(&self) -> &MiriWorkspace {
-        self.workspaces
-            .values()
-            .find(|workspace| workspace.is_focused)
-            .expect("Could not get focused workspace")
+    pub fn get_focused_workspace(&self) -> Option<&MiriWorkspace> {
+        self.workspaces.values().find(|workspace| workspace.is_focused)
     }
 
-    pub fn get_focused_workspace_mut(&mut self) -> &mut MiriWorkspace {
-        self.workspaces
-            .values_mut()
-            .find(|workspace| workspace.is_focused)
-            .expect("Could not get focused workspace")
+    pub fn get_focused_workspace_mut(&mut self) -> Option<&mut MiriWorkspace> {
+        self.workspaces.values_mut().find(|workspace| workspace.is_focused)
     }
 
     pub fn set_focused_workspace_mode(&mut self, mode: Mode) {
-        self.get_focused_workspace_mut().mode = mode;
+        let focused_workspace = self
+            .get_focused_workspace_mut()
+            .expect("Could not get focused workspace when attempting to set mode");
+
+        focused_workspace.mode = mode;
     }
 }
 
@@ -77,7 +75,7 @@ pub struct MiriWindow {
     pub is_floating: bool,
 }
 
-pub fn copy_event_state_to_layout(event_state: &EventStreamState, layout: &mut Layout) {
+pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layout: &Layout, layout: &mut Layout) {
     layout.workspaces.clear();
 
     for workspace in event_state.workspaces.workspaces.values() {
@@ -86,7 +84,7 @@ pub fn copy_event_state_to_layout(event_state: &EventStreamState, layout: &mut L
             .as_ref()
             .expect("Could not get workspace output")
             .clone();
-        let key = (output_name, workspace.idx);
+        let key = (output_name.clone(), workspace.idx);
 
         let windows: Vec<MiriWindow> = event_state
             .windows
@@ -108,17 +106,20 @@ pub fn copy_event_state_to_layout(event_state: &EventStreamState, layout: &mut L
             })
             .collect();
 
+        let previous_mode =
+            if let Some(previous_workspace) = previous_layout.workspaces.get(&(output_name.clone(), workspace.idx)) {
+                previous_workspace.mode
+            } else {
+                layout.default_mode
+            };
+
         let miri_workspace = MiriWorkspace {
             id: workspace.id,
-            output: workspace
-                .output
-                .as_ref()
-                .expect("Could not get workspace output when copying event state to layout")
-                .clone(),
+            output: output_name.clone(),
             index: workspace.idx,
             is_focused: workspace.is_focused,
             is_active: workspace.is_active,
-            mode: layout.default_mode, // FIXME: get the actual mode here
+            mode: previous_mode,
             windows,
         };
 

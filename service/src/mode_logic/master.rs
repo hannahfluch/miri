@@ -52,8 +52,14 @@ pub fn handle_master_window_open(service_state: &mut ServiceState, new_window: &
         return;
     }
 
-    let previous_focused_workspace = service_state.previous_layout.get_focused_workspace();
-    let current_focused_workspace = service_state.current_layout.get_focused_workspace();
+    let previous_focused_workspace = service_state
+        .previous_layout
+        .get_focused_workspace()
+        .expect("Could not get previous focused workspace");
+    let current_focused_workspace = service_state
+        .current_layout
+        .get_focused_workspace()
+        .expect("Could not get current focused workspace");
 
     let workspace_changed = previous_focused_workspace.id != current_focused_workspace.id;
     let current_windows = &current_focused_workspace.windows;
@@ -153,7 +159,11 @@ pub fn handle_master_window_open(service_state: &mut ServiceState, new_window: &
 }
 
 pub fn handle_master_window_close(_closed_id: u64, service_state: &mut ServiceState, action_socket: &mut Socket) {
-    let current_windows = &service_state.current_layout.get_focused_workspace().windows;
+    let current_windows = &service_state
+        .current_layout
+        .get_focused_workspace()
+        .expect("Could not get current focused workspace")
+        .windows;
     if current_windows.len() <= 0 {
         return;
     };
