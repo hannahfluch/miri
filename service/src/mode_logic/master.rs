@@ -47,7 +47,7 @@ fn move_window_under_focused_window(
 }
 
 // FIXME: expect in here is really not a good pattern. we don't want this program to crash just because we were unable to make a window fullscreen for example. (or do we?)
-pub fn handle_master_window_open(service_state: &mut ServiceState, new_window: &Window, action_socket: &mut Socket) {
+pub fn handle_master_window_open(service_state: &ServiceState, new_window: &Window, action_socket: &mut Socket) {
     if new_window.is_floating {
         return;
     }
