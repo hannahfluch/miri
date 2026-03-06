@@ -1,15 +1,13 @@
 use niri_ipc::{Window, Workspace, state::EventStreamState};
 
-use crate::service_state::ServiceState;
+use crate::service_state::Layout;
 
 // determines if the window was spawned, or just simply moved/changed
-pub fn window_is_new(window_id: &u64, service_state: &mut ServiceState) -> bool {
-    let previous_workspace = service_state
-        .previous_layout
+pub fn window_is_new(window_id: &u64, previous_layout: &Layout, current_layout: &Layout) -> bool {
+    let previous_workspace = previous_layout
         .get_focused_workspace()
         .expect("Could not get previous focused workspace");
-    let current_workspace = service_state
-        .current_layout
+    let current_workspace = current_layout
         .get_focused_workspace()
         .expect("Could not get current focused workspace");
 

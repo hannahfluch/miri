@@ -77,6 +77,7 @@ pub struct MiriWindow {
 
 pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layout: &Layout, layout: &mut Layout) {
     layout.workspaces.clear();
+    let mut focused_workspace_id: Option<u64> = None;
 
     for workspace in event_state.workspaces.workspaces.values() {
         let output_name = workspace
@@ -113,6 +114,10 @@ pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layou
                 layout.default_mode
             };
 
+        if workspace.is_focused {
+            focused_workspace_id = Some(workspace.id);
+        }
+
         let miri_workspace = MiriWorkspace {
             id: workspace.id,
             output: output_name.clone(),
@@ -126,16 +131,27 @@ pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layou
         layout.workspaces.insert(key, miri_workspace);
     }
 
-    // force the focused workspace to be where the currently focused window is
+    // force the focused workspace to be where the currently focused window is, or if there is none, the current active workspace
     for workspace in layout.workspaces.values_mut() {
         let has_focused_window = workspace.get_focused_window().is_some();
 
         if !has_focused_window && workspace.is_focused {
             workspace.is_focused = false;
+
+            if Some(workspace.id) == focused_workspace_id {
+                focused_workspace_id = None;
+            }
         }
 
         if has_focused_window && !workspace.is_focused {
             workspace.is_focused = true;
+            focused_workspace_id = Some(workspace.id);
+        }
+    }
+
+    if focused_workspace_id.is_none() {
+        if let Some(active_workspace) = layout.workspaces.values_mut().find(|workspace| workspace.is_active) {
+            active_workspace.is_focused = true;
         }
     }
 }

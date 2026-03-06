@@ -142,7 +142,11 @@ fn handle_niri_event(
                 .expect("Could not get current focused workspace");
             let current_mode = workspace.mode;
 
-            if window_is_new(&window.id, service_state) {
+            if window_is_new(
+                &window.id,
+                &service_state.previous_layout,
+                &service_state.current_layout,
+            ) {
                 println!("[EVENT]: window opened");
 
                 match current_mode {
