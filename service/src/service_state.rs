@@ -21,6 +21,7 @@ impl ServiceState {
 pub struct Layout {
     // output name and index used as key
     // FIXME: solve case of output name being the same
+    // FIXME: just make this map id to workspace
     pub workspaces: HashMap<(String, u8), MiriWorkspace>,
     pub default_mode: Mode,
 }

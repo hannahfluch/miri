@@ -8,9 +8,9 @@ use niri_ipc::state::{EventStreamState, EventStreamStatePart};
 use niri_ipc::{Request, socket::Socket};
 
 use service::mode_logic::master::{
-    force_workspace_windows_into_layout_mode, handle_master_window_close, handle_master_window_open,
+    force_workspace_windows_into_layout_mode, handle_workspace_gain_window, handle_workspace_lose_window,
 };
-use service::mode_logic::scroll::handle_scroll_window_open;
+
 use service::niri_ipc_utils::{get_windows_on_focused_workspace, window_is_new};
 use service::service_state::{ServiceState, copy_event_state_to_layout};
 
@@ -136,11 +136,10 @@ fn handle_niri_event(
 
     match event {
         niri_ipc::Event::WindowOpenedOrChanged { ref window } => {
-            let workspace = service_state
+            let current_workspace = service_state
                 .current_layout
                 .get_focused_workspace()
                 .expect("Could not get current focused workspace");
-            let current_mode = workspace.mode;
 
             if window_is_new(
                 &window.id,
@@ -148,56 +147,65 @@ fn handle_niri_event(
                 &service_state.current_layout,
             ) {
                 println!("[EVENT]: window opened");
+                // FIXME: we need this function to be handled differently.
+                // we need it to only take in the previous state and current state of the workspace we are interested in.
+                // then fix it accordingly. this will allow me to do something more general like:
+                // "handle master window change on workspace".
+                // So there will be no distinction between window open or window close.
+                // I can't really put into words why we need this but it will be better.
+                // The main issue with this is the "window" and "window id" we receive from the niri event listener
+                // will likely not be used anymore
 
-                match current_mode {
-                    // FIXME: we need this function to be handled differently.
-                    // we need it to only take in the previous state and current state of the workspace we are interested in.
-                    // then fix it accordingly. this will allow me to do something more general like:
-                    // "handle master window change on workspace".
-                    // So there will be no distinction between window open or window close.
-                    // I can't really put into words why we need this but it will be better.
-                    // The main issue with this is the "window" and "window id" we receive from the niri event listener
-                    // will likely not be used anymore
-                    Mode::Master => handle_master_window_open(service_state, window, action_socket),
-                    Mode::Scroll => {
-                        handle_scroll_window_open(service_state, window, action_socket);
-                    }
-                }
+                handle_workspace_gain_window(
+                    current_workspace,
+                    window,
+                    &service_state.config,
+                    action_socket,
+                    service_state
+                        .previous_layout
+                        .get_focused_workspace()
+                        .expect("Could not get previous focused workspace")
+                        .get_focused_window(),
+                );
             } else {
                 println!("[EVENT]: window changed");
-                match current_mode {
-                    Mode::Master => 'early: {
-                        let window_moved_into_workspace = service_state
-                            .previous_layout
-                            .get_focused_workspace()
-                            .expect("Could not get previous focused workspace")
-                            .id
-                            != service_state
-                                .current_layout
-                                .get_focused_workspace()
-                                .expect("Could not get current focused workspace")
-                                .id;
+                let previous_focused_workspace = service_state
+                    .previous_layout
+                    .get_focused_workspace()
+                    .expect("Could not get previous focused workspace");
 
-                        if window_moved_into_workspace {
-                            handle_master_window_open(service_state, window, action_socket)
-                        }
-                        break 'early;
-                    }
-                    Mode::Scroll => 'early: {
-                        break 'early;
-                    }
+                let window_moved_into_workspace = previous_focused_workspace.id
+                    != service_state
+                        .current_layout
+                        .get_focused_workspace()
+                        .expect("Could not get current focused workspace")
+                        .id;
+
+                if window_moved_into_workspace {
+                    println!("[EVENT]: window moved to new workspace");
+                    let previous_focused_workspace_current_state = service_state.current_layout.workspaces
+                        .values()
+                        .find(|workspace| workspace.id == previous_focused_workspace.id)
+                        .expect("Could not get previous_focused_workspace_current_state. Somehow, a workspace was destroyed when a window moved to another workspace");
+
+                    handle_workspace_lose_window(
+                        previous_focused_workspace_current_state,
+                        &service_state.config,
+                        action_socket,
+                    );
+                    handle_workspace_gain_window(current_workspace, window, &service_state.config, action_socket, None)
                 }
             }
         }
-        niri_ipc::Event::WindowClosed { id } => {
+        niri_ipc::Event::WindowClosed { id: _ } => {
             println!("[EVENT]: window closed");
-            let workspace = service_state
+            let current_workspace = service_state
                 .current_layout
                 .get_focused_workspace()
                 .expect("Could not get current focused workspace");
-            let current_mode = workspace.mode;
+            let current_mode = current_workspace.mode;
             match current_mode {
-                Mode::Master => handle_master_window_close(id, service_state, action_socket),
+                Mode::Master => handle_workspace_lose_window(current_workspace, &service_state.config, action_socket),
                 Mode::Scroll => {
                     return;
                 }
