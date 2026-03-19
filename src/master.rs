@@ -1,7 +1,10 @@
-use common::{Mode, config::MiriConfig};
 use niri_ipc::{Action, Request, SizeChange, Window, socket::Socket};
 
-use crate::service_state::{MiriWindow, MiriWorkspace};
+use crate::{
+    config::MiriConfig,
+    ipc::Mode,
+    service_state::{MiriWindow, MiriWorkspace},
+};
 
 // TODO: handle action result types in this file
 // TODO: since these functions are now more general, move them somewhere else

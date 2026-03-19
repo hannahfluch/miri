@@ -1,21 +1,18 @@
-use common::config::MiriConfig;
-use common::miri_socket::MiriListener;
-use common::niri_socket::NiriSocket;
-use common::{Command, IPCMessage, IPCMessageContainer, MiriAction, MiriGet, Mode};
-
 use niri_ipc::Event;
 use niri_ipc::state::{EventStreamState, EventStreamStatePart};
 use niri_ipc::{Request, socket::Socket};
 
-use service::mode_logic::master::{
-    force_workspace_windows_into_layout_mode, handle_workspace_gain_window, handle_workspace_lose_window,
-};
-
-use service::niri_ipc_utils::{get_windows_on_focused_workspace, window_is_new};
-use service::service_state::{ServiceState, copy_event_state_to_layout};
-
 use tokio::sync::mpsc::Sender;
 
+use crate::config::MiriConfig;
+use crate::ipc::{Command, IPCMessage, IPCMessageContainer, MiriAction, MiriGet, Mode};
+use crate::master::{
+    force_workspace_windows_into_layout_mode, handle_workspace_gain_window, handle_workspace_lose_window,
+};
+use crate::miri_socket::MiriListener;
+use crate::niri_ipc_utils::{get_windows_on_focused_workspace, window_is_new};
+use crate::niri_socket::NiriSocket;
+use crate::service_state::{ServiceState, copy_event_state_to_layout};
 trait CliRunner {
     fn run(&self, action_socket: &mut Socket, event_state: &EventStreamState, service_state: &mut ServiceState);
 }
@@ -23,6 +20,7 @@ trait CliRunner {
 impl CliRunner for Command {
     fn run(&self, action_socket: &mut Socket, event_state: &EventStreamState, service_state: &mut ServiceState) {
         match self {
+            Command::Service { service_command: _ } => {}
             Command::Action { action } => action.run(action_socket, event_state, service_state),
             Command::Get { get } => get.run(action_socket, event_state, service_state),
         }
@@ -209,8 +207,8 @@ fn handle_niri_event(
     }
 }
 
-#[tokio::main]
-async fn main() {
+pub async fn main_service() {
+    println!("MADE IT");
     let (tx, mut rx) = tokio::sync::mpsc::channel::<MiriEvent>(64);
     let mut action_socket = Socket::connect().expect("Failed to connect to niri_ipc action socket");
     let mut event_state = EventStreamState::default();

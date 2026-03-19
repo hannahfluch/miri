@@ -1,6 +1,7 @@
-use common::{Mode, config::MiriConfig};
 use niri_ipc::state::EventStreamState;
 use std::collections::HashMap;
+
+use crate::{config::MiriConfig, ipc::Mode};
 
 pub struct ServiceState {
     pub previous_layout: Layout,

@@ -1,10 +1,6 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::{Deserialize, Serialize};
 
-pub mod config;
-pub mod miri_socket;
-pub mod niri_socket;
-
 pub const MIRI_SOCKET_PATH: &str = "/tmp/modal-niri.sock";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,6 +31,10 @@ pub struct Args {
 
 #[derive(Debug, Subcommand, Serialize, Deserialize)]
 pub enum Command {
+    Service {
+        #[command(subcommand)]
+        service_command: MiriServiceCommand,
+    },
     Action {
         #[command(subcommand)]
         action: MiriAction,
@@ -43,6 +43,11 @@ pub enum Command {
         #[command(subcommand)]
         get: MiriGet,
     },
+}
+
+#[derive(Debug, Clone, Subcommand, Serialize, Deserialize)]
+pub enum MiriServiceCommand {
+    Start,
 }
 
 #[derive(Debug, Clone, Subcommand, Serialize, Deserialize)]

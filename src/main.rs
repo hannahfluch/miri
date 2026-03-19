@@ -1,23 +1,17 @@
 use clap::Parser;
-use cli::miri_commands::*;
-use common::{Args, Command, MiriAction, MiriGet};
-use niri_ipc::{socket::Socket, Request};
+use miri::{
+    ipc::{Args, Command, MiriAction, MiriGet, MiriServiceCommand},
+    miri_commands::send_command_to_miri_service,
+    service::main_service,
+};
+use niri_ipc::{Request, socket::Socket};
 
 trait CliRunner {
-    fn run(&self, niri_ipc: Socket);
-}
-
-impl CliRunner for Command {
-    fn run(&self, niri_ipc: Socket) {
-        match self {
-            Command::Action { action } => action.run(niri_ipc),
-            Command::Get { get } => get.run(niri_ipc),
-        }
-    }
+    async fn run(&self, niri_ipc: Socket);
 }
 
 impl CliRunner for MiriAction {
-    fn run(&self, mut _niri_ipc: Socket) {
+    async fn run(&self, mut _niri_ipc: Socket) {
         match self {
             MiriAction::CycleFocusedWorkspaceMode => {
                 send_command_to_miri_service(Command::Action {
@@ -33,7 +27,7 @@ impl CliRunner for MiriAction {
 }
 
 impl CliRunner for MiriGet {
-    fn run(&self, mut niri_ipc: Socket) {
+    async fn run(&self, mut niri_ipc: Socket) {
         match self {
             MiriGet::FocusedWorkspaceMode => {
                 send_command_to_miri_service(Command::Get {
@@ -50,9 +44,22 @@ impl CliRunner for MiriGet {
     }
 }
 
-fn main() {
+impl CliRunner for Command {
+    async fn run(&self, niri_ipc: Socket) {
+        match self {
+            Command::Service { service_command } => match service_command {
+                MiriServiceCommand::Start => main_service().await,
+            },
+            Command::Action { action } => action.run(niri_ipc).await,
+            Command::Get { get } => get.run(niri_ipc).await,
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let args = Args::parse();
     let niri_ipc_socket =
         Socket::connect().expect("Failed to connect to niri ipc. Make sure you're using this inside a niri session");
-    let args = Args::parse();
-    args.command.run(niri_ipc_socket);
+    args.command.run(niri_ipc_socket).await;
 }

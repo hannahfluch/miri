@@ -2,7 +2,7 @@ use config::{Config, ConfigError, File};
 use serde::{Deserialize, Deserializer, Serialize};
 use std::path::{Path, PathBuf};
 
-use super::Mode;
+use crate::ipc::Mode;
 
 struct MiriDefaults;
 

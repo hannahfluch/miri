@@ -1,6 +1,7 @@
-use common::{Command, IPCMessage, IPCMessageContainer, MIRI_SOCKET_PATH};
 use std::io::Write;
 use std::os::unix::net::UnixStream;
+
+use crate::ipc::{Command, IPCMessage, IPCMessageContainer, MIRI_SOCKET_PATH};
 
 // send a command to the daemon
 pub fn send_command_to_miri_service(command: Command) {

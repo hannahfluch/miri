@@ -1,7 +1,7 @@
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 
-use crate::MIRI_SOCKET_PATH;
+use crate::ipc::MIRI_SOCKET_PATH;
 
 // TODO: this is an ai generated async socket reader. please redo this
 pub struct MiriListener {
