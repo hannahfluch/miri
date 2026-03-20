@@ -1,0 +1,13 @@
+[Unit]
+Description=Miri Service
+PartOf=niri.service
+After=niri.service
+
+[Service]
+ExecStart=%h/.local/bin/miri service start
+Restart=on-failure
+RestartSec=5s
+Type=simple
+
+[Install]
+WantedBy=niri.service
