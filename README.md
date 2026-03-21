@@ -1,8 +1,18 @@
 # Miri
-An extension to the Niri window manager to allow for Master layout of windows. Looking to support more layout modes soon
+An extension to the Niri window manager to allow for Master layout of windows
 
+**IMPORTANT:** this project is a work in progress and there are no guarantees of functionality at the moment. **There will be bugs**, so please feel free to report them or make a pull request and I'll do my best to get on it. Master layout mode is currently in a usable state but there are certain edge cases which need to be ironed out
 
-## Installation
+Other than adding more layout modes, I'd like to make a DMS plugin for the bar which shows the current mode of the current workspace on that output
+
+## Supported layout modes
+- Master       - In progress
+- Grid         - Planned
+- Hybrid       - Planned
+- Drag and pan - Planned
+- Dwindle      - not planned
+
+## Installation and Setup
 Run the install script from the latest release and follow the instructions
 ```sh
 curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.sh \
@@ -11,7 +21,7 @@ curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.s
   && rm /tmp/miri-install.sh
 ```
 
-Once installed, the `miri` command will be available. Be sure `~/.local/bin` is in your `PATH`. Most distros include it automatically, but if `miri` isn't found after installing, add this to your `~/.bashrc`:
+Once installed, the `miri` command will be available. Be sure `~/.local/bin` is in your `PATH`:
 ```sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
@@ -19,7 +29,13 @@ export PATH="$HOME/.local/bin:$PATH"
 Then reload your shell with `source ~/.bashrc`
 
 ## Configuration
-todo
+Miri can be configured though `~/.config/miri/config.toml`. These options are not finalized and will likely change, but if you are interested, here is the current configuration list:
+
+```toml
+default_workspace_mode = "master"
+master_column_default_width_percentage = 50.0
+master_maximize_single_window = true
+```
 
 ## Misc
 ASCII art for installer
