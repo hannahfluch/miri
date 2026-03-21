@@ -20,7 +20,6 @@ impl CliRunner for MiriAction {
             MiriAction::SetFocusedWorkspaceMode { mode: _ } => {
                 send_command_to_miri_service(Command::Action { action: self.clone() });
             }
-            MiriAction::Spawn => {}
         }
     }
 }
@@ -33,7 +32,6 @@ impl CliRunner for MiriGet {
                     get: MiriGet::FocusedWorkspaceMode,
                 });
             }
-            MiriGet::OtherThing => {}
         }
     }
 }
