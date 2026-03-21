@@ -4,7 +4,7 @@ An extension to the Niri window manager to allow for Master layout of windows. L
 
 ## Installation
 Run the install script from the latest release and follow the instructions
-```
+```sh
 curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.sh \
   -o /tmp/miri-install.sh \
   && sh /tmp/miri-install.sh \
