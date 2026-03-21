@@ -23,9 +23,6 @@ BOLD='\033[1m'
 GREY='\033[0;90m'
 RESET='\033[0m'
 
-BORDER=${GREY}
-BORDER_FOCUSED=${CYAN}
-
 TEXT=${GREY}
 
 info() { echo -e    "${BLUE}[Miri Info]:${GREY} $*${RESET}"; }
@@ -92,7 +89,7 @@ systemctl --user show-environment >/dev/null 2>&1 || die "systemd user session n
 echo ""
 echo -e "${BOLD}Miri${RESET} ${TEXT}(Modal Niri extension for Niri)${RESET}"
 echo -e "${RESET}╔═══════-□×╗${TEXT}╔═════-□×╗    ${RESET}╔══════-□×${RESET}╗${TEXT}╔══════-□×╗"
-echo -e "${RESET}║${TEXT}⠿⠿⠯⠥${RESET}      ║${TEXT}╚════════╝    ${RESET}║${TEXT}>_ ${CYAN}${BOLD}miri${RESET}  ║${GREY}║>_     ${BORDER}  ║"
+echo -e "${RESET}║${TEXT}⠿⠿⠯⠥${RESET}      ║${TEXT}╚════════╝    ${RESET}║${TEXT}>_ ${CYAN}${BOLD}miri${RESET}  ║${GREY}║>_       ║"
 echo -e "${RESET}║${TEXT}⠿⠿⠶⠶⠶⠶⠶⠦⠤${RESET} ║${TEXT}╔═════-□×╗    ${RESET}╚═════════╝${GREY}╚═════════╝"
 echo -e "${RESET}║${TEXT}⠿⠿⠿⠯⠭⠭⠉⠉${RESET}  ║${TEXT}╚════════╝    ╔══════-□×╗${GREY}╔══════-□×╗"
 echo -e "${RESET}║${TEXT}>_ ${CYAN}${BOLD}miri${RESET}   ║${TEXT}╔═════-□×╗    ${GREY}║>_       ║║>_       ║"
@@ -124,7 +121,7 @@ if [[ "$ACTION" == "Install miri" ]]; then
     url=$(echo "$RELEASE_JSON" \
       | grep -o '"browser_download_url": *"[^"]*'"$asset_name"'[^"]*"' \
       | cut -d'"' -f4)
-    [[ -n "$url" ]] || die "Asset '$asset_name' not found in latest release - check the asset name"
+    [[ -n "$url" ]] || die "Asset '$asset_name' not found in latest release"
     echo "$url"
   }
 

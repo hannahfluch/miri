@@ -1,0 +1,66 @@
+name: Release
+run-name: ${{ inputs.description }} - ${{ inputs.increment }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      description:
+        description: "Description"
+        required: true
+        type: string
+      increment:
+        description: "Version to increment"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    name: Build and Release
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        timeout-minutes: 3
+        with:
+          fetch-depth: 0
+
+      - name: get next version
+        id: version
+        uses: reecetech/version-increment@2024.10.1
+        with:
+          scheme: semver
+          increment: ${{ inputs.increment }}
+
+      - name: install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+
+      - name: install musl-tools
+        run: sudo apt-get install -y musl-tools
+
+      - name: build
+        run: cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: rename binary
+        run: cp target/x86_64-unknown-linux-musl/release/miri miri-x86_64-unknown-linux-musl
+
+      - name: create release
+        uses: ncipollo/release-action@v1.18.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generateReleaseNotes: true
+          tag: ${{ steps.version.outputs.v-version }}
+          artifacts: |
+            miri-x86_64-unknown-linux-musl
+            miri.service
+          body: |
+            ${{ inputs.description }}
