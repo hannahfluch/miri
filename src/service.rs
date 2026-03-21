@@ -128,6 +128,11 @@ fn handle_niri_event(
 
     match event {
         niri_ipc::Event::WindowOpenedOrChanged { ref window } => {
+            if window.workspace_id.is_none() {
+                // this means its a window we are dragging
+                return;
+            }
+
             let current_workspace = service_state
                 .current_layout
                 .get_focused_workspace()
@@ -151,7 +156,7 @@ fn handle_niri_event(
                 let previous_focused_workspace = service_state
                     .previous_layout
                     .get_focused_workspace()
-                    .expect("Could not get previous focused workspace");
+                    .expect("Could not get previous focused workspace"); // FIXME: this should not crash, just return or something
 
                 let window_moved_into_workspace = previous_focused_workspace.id
                     != service_state

@@ -1,7 +1,7 @@
 use niri_ipc::state::EventStreamState;
 use std::collections::HashMap;
 
-use crate::{config::MiriConfig, ipc::Mode};
+use crate::{config::MiriConfig, ipc::Mode, niri_ipc_utils::get_focused_window};
 
 pub struct ServiceState {
     pub previous_layout: Layout,
@@ -113,10 +113,12 @@ pub struct MiriWindow {
     pub is_floating: bool,
 }
 
+// TODO: this function really needs to be rethought
 pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layout: &Layout, layout: &mut Layout) {
     layout.workspaces.clear();
     let mut focused_workspace_id: Option<u64> = None;
 
+    // FIXME: this big loop is unnecessary and does not catch the case where a window is focused but not assigned to a workspace (dragging a window)
     for workspace in event_state.workspaces.workspaces.values() {
         let output_name = workspace
             .output
@@ -169,27 +171,37 @@ pub fn copy_event_state_to_layout(event_state: &EventStreamState, previous_layou
         layout.workspaces.insert(key, miri_workspace);
     }
 
-    // force the focused workspace to be where the currently focused window is, or if there is none, the current active workspace
-    for workspace in layout.workspaces.values_mut() {
-        let has_focused_window = workspace.get_focused_window().is_some();
+    // // while windows are being dragged around, event_state shows them as focused but assigned to no workspace
+    // // for the purpose of our program, we want it to be assigned to the current focused workspace
+    let focused_window_has_workspace = if let Some(focused_window) = get_focused_window(event_state) {
+        focused_window.workspace_id.is_some()
+    } else {
+        false
+    };
 
-        if !has_focused_window && workspace.is_focused {
-            workspace.is_focused = false;
+    if focused_window_has_workspace {
+        // force the focused workspace to be where the currently focused window is
+        for workspace in layout.workspaces.values_mut() {
+            let has_focused_window = workspace.get_focused_window().is_some();
 
-            if Some(workspace.id) == focused_workspace_id {
-                focused_workspace_id = None;
+            if !has_focused_window && workspace.is_focused {
+                workspace.is_focused = false;
+
+                if Some(workspace.id) == focused_workspace_id {
+                    focused_workspace_id = None;
+                }
+            }
+            if has_focused_window && !workspace.is_focused {
+                workspace.is_focused = true;
+                focused_workspace_id = Some(workspace.id);
             }
         }
 
-        if has_focused_window && !workspace.is_focused {
-            workspace.is_focused = true;
-            focused_workspace_id = Some(workspace.id);
-        }
-    }
-
-    if focused_workspace_id.is_none() {
-        if let Some(active_workspace) = layout.workspaces.values_mut().find(|workspace| workspace.is_active) {
-            active_workspace.is_focused = true;
+        // if we didnt have any focused window from the previous step, just set the focused workspace to the active workspace. FIXME: there can be multiple active workspaces at once with multiple monitors, so this is unpredictable
+        if focused_workspace_id.is_none() {
+            if let Some(active_workspace) = layout.workspaces.values_mut().find(|workspace| workspace.is_active) {
+                active_workspace.is_focused = true;
+            }
         }
     }
 }

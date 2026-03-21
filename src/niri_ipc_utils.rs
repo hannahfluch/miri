@@ -1,5 +1,9 @@
 use niri_ipc::{Window, Workspace, state::EventStreamState};
 
+pub fn get_focused_window(event_state: &EventStreamState) -> Option<&Window> {
+    event_state.windows.windows.values().find(|window| window.is_focused)
+}
+
 fn get_focused_workspace(event_state: &EventStreamState) -> Option<&Workspace> {
     event_state
         .workspaces
