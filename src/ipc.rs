@@ -56,13 +56,11 @@ pub enum MiriServiceCommand {
 pub enum MiriAction {
     CycleFocusedWorkspaceMode,
     SetFocusedWorkspaceMode { mode: Mode },
-    Spawn,
 }
 
 #[derive(Debug, Subcommand, Serialize, Deserialize)]
 pub enum MiriGet {
     FocusedWorkspaceMode,
-    OtherThing,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ValueEnum)]

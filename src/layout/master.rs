@@ -7,7 +7,6 @@ use crate::{
 
 fn handle_single_window(config: &MiriConfig, single_window_id: u64, action_socket: &mut Socket) {
     if config.master_maximize_single_window {
-        println!("[DEBUG]: handling single window: {}", single_window_id);
         let full_screen_action = Action::SetWindowWidth {
             id: Some(single_window_id),
             change: niri_ipc::SizeChange::SetProportion(100.0),
@@ -57,7 +56,6 @@ pub fn handle_master_gain_window(
     let window_count = current_windows.len();
 
     if window_count == 1 {
-        println!("only 1!!!!");
         handle_single_window(&config, new_window.id, action_socket);
         return;
     }
@@ -116,7 +114,6 @@ pub fn handle_master_gain_window(
         change: niri_ipc::SizeChange::SetProportion(config.master_column_default_width_percentage),
     };
 
-    println!("{:?}", set_master_proportion);
     action_socket
         .send(Request::Action(set_master_proportion))
         .expect("lost connection to niri")

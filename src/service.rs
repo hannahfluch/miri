@@ -59,9 +59,6 @@ impl CliRunner for MiriAction {
 
                 force_workspace_windows_into_layout_mode(workspace_windows, action_socket, &service_state.config, *mode)
             }
-            MiriAction::Spawn => {
-                println!("[ACTION]: Spawn");
-            }
         }
     }
 }
@@ -71,9 +68,6 @@ impl CliRunner for MiriGet {
         match self {
             MiriGet::FocusedWorkspaceMode => {
                 println!("[GET]: FocusedWorkspaceMode");
-            }
-            MiriGet::OtherThing => {
-                println!("[GET]: OtherThing");
             }
         }
     }
@@ -204,13 +198,11 @@ fn handle_niri_event(
 }
 
 pub async fn main_service() {
-    println!("MADE IT");
     let (tx, mut rx) = tokio::sync::mpsc::channel::<MiriEvent>(64);
     let mut action_socket = Socket::connect().expect("Failed to connect to niri_ipc action socket");
     let mut event_state = EventStreamState::default();
     let config = MiriConfig::load();
     let mut service_state = ServiceState::new(config);
-    println!("{:?}", service_state.config);
 
     tokio::spawn(run_cli_listener(tx.clone()));
     tokio::spawn(run_niri_event_listener(tx.clone()));
