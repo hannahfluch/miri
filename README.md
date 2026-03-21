@@ -15,20 +15,18 @@ Other than adding more layout modes, I'd like to make a DMS plugin for the bar w
 - Dwindle      - not planned
 
 ## Installation and Setup
-Run the install script from the latest release and follow the instructions
+1. Run the install script from the latest release and follow the instructions
 ```sh
 curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.sh \
   -o /tmp/miri-install.sh \
   && sh /tmp/miri-install.sh \
   && rm /tmp/miri-install.sh
 ```
-
-Once installed, the `miri` command will be available. Be sure `~/.local/bin` is in your `PATH`:
+2. Once installed, the `miri` command will be available. Be sure `~/.local/bin` is in your `PATH`:
 ```sh
 export PATH="$HOME/.local/bin:$PATH"
 ```
-
-Then reload your shell with `source ~/.bashrc`
+3. Reload your shell with `source ~/.bashrc`
 
 ## Configuration
 Miri can be configured though `~/.config/miri/config.toml`. These options are not finalized and will likely change, but if you are interested, here is the current configuration list:
