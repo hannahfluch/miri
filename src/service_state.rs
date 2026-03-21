@@ -17,6 +17,28 @@ impl ServiceState {
             config,
         }
     }
+
+    // determines if the window was spawned, or just simply moved/changed
+    pub fn window_is_new(&self, window_id: &u64) -> bool {
+        let previous_workspace = self
+            .previous_layout
+            .get_focused_workspace()
+            .expect("Could not get previous focused workspace");
+        let current_workspace = self
+            .current_layout
+            .get_focused_workspace()
+            .expect("Could not get current focused workspace");
+
+        // check if we moved to a new workspace
+        if previous_workspace.id != current_workspace.id {
+            return false;
+        }
+
+        match previous_workspace.windows.iter().find(|window| window.id == *window_id) {
+            Some(_) => return false,
+            None => return true,
+        };
+    }
 }
 #[derive(Debug)]
 pub struct Layout {

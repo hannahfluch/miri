@@ -10,7 +10,7 @@ use crate::layout::handler::{
     force_workspace_windows_into_layout_mode, handle_workspace_gain_window, handle_workspace_lose_window,
 };
 use crate::miri_socket::MiriListener;
-use crate::niri_ipc_utils::{get_windows_on_focused_workspace, window_is_new};
+use crate::niri_ipc_utils::get_windows_on_focused_workspace;
 use crate::niri_socket::NiriSocket;
 use crate::service_state::{ServiceState, copy_event_state_to_layout};
 trait CliRunner {
@@ -139,11 +139,7 @@ fn handle_niri_event(
                 .get_focused_workspace()
                 .expect("Could not get current focused workspace");
 
-            if window_is_new(
-                &window.id,
-                &service_state.previous_layout,
-                &service_state.current_layout,
-            ) {
+            if service_state.window_is_new(&window.id) {
                 println!("[EVENT]: window opened");
                 handle_workspace_gain_window(
                     current_workspace,
