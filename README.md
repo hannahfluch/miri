@@ -17,7 +17,7 @@ Also planned: a DMS bar plugin to display the current workspace layout mode
 > [!WARNING]
 > This project is in development. **There will be bugs**! Master layout is usable, but rough edges remain. Issues and PRs welcome!
 
-## Install
+## Installation
 Run the install script from the latest release and follow the instructions
 ```sh
 curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.sh \
@@ -26,6 +26,9 @@ curl -fsSL https://github.com/MintyDoggo/miri/releases/latest/download/install.s
   && rm /tmp/miri-install.sh
 ```
 Once installed, the `miri` command will be available. Be sure `~/.local/bin` is in your `PATH`
+
+> [!NOTE]
+> The installer script also has an uninstall option, so feel free to try it out commitment free!
 
 ## Keybinds setup
 All miri actions can be spawned via `miri action <action-name>`. You can list all available actions by running `miri action`. To add an action to a keybind, edit your niri config and put the spawn command for the keybind you want
