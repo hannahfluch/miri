@@ -82,6 +82,8 @@ Mod+Ctrl+WheelScrollUp cooldown-ms=150 { spawn "miri" "override" "move-column-to
 > [!NOTE]
 > In the case that the miri service is not running or something goes wrong, miri will fallback on executing the niri action normally. This ensures your config always works as expected as long as miri is installed
 
+Current version supported is `v25.11`. Will likely work on `niri-git` but it is currently untested
+
 You're now all setup! Continue reading for further configuration
 
 ## Configuration
