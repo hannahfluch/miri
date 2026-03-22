@@ -1,4 +1,5 @@
-use niri_ipc::{Window, Workspace, state::EventStreamState};
+use niri_ipc::socket::Socket;
+use niri_ipc::{Request, Response, Window, Workspace, state::EventStreamState};
 
 pub fn get_focused_window(event_state: &EventStreamState) -> Option<&Window> {
     event_state.windows.windows.values().find(|window| window.is_focused)
@@ -26,4 +27,13 @@ pub fn get_windows_on_focused_workspace(event_state: &EventStreamState) -> Optio
         .collect();
 
     Some(workspace_windows)
+}
+
+pub fn get_focused_window_id(action_socket: &mut Socket) -> Option<u64> {
+    let reply = action_socket.send(Request::FocusedWindow).ok()?;
+    let response = reply.ok()?;
+    match response {
+        Response::FocusedWindow(Some(window)) => Some(window.id),
+        _ => None,
+    }
 }

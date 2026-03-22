@@ -4,6 +4,7 @@ pub mod layout {
     pub mod handler;
     pub mod master;
 }
+pub mod miri_overrides;
 pub mod miri_socket;
 pub mod niri_ipc_utils;
 pub mod niri_socket;

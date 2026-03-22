@@ -1,6 +1,7 @@
 use clap::Parser;
 use miri::{
-    ipc::{Args, Command, MiriAction, MiriGet, MiriServiceCommand, send_command_to_miri_service},
+    ipc::{Args, Command, MiriAction, MiriGet, MiriOverride, MiriServiceCommand, send_command_to_miri_service},
+    miri_overrides,
     service::main_service,
 };
 use niri_ipc::socket::Socket;
@@ -13,12 +14,16 @@ impl CliRunner for MiriAction {
     async fn run(&self, mut _niri_ipc: Socket) {
         match self {
             MiriAction::CycleFocusedWorkspaceMode => {
-                send_command_to_miri_service(Command::Action {
+                if let Err(e) = send_command_to_miri_service(Command::Action {
                     action: MiriAction::CycleFocusedWorkspaceMode,
-                });
+                }) {
+                    eprintln!("Failed to send action to miri service: {:?}", e);
+                }
             }
             MiriAction::SetFocusedWorkspaceMode { mode: _ } => {
-                send_command_to_miri_service(Command::Action { action: self.clone() });
+                if let Err(e) = send_command_to_miri_service(Command::Action { action: self.clone() }) {
+                    eprintln!("Failed to send action to miri service: {:?}", e);
+                }
             }
         }
     }
@@ -30,7 +35,21 @@ impl CliRunner for MiriGet {
             MiriGet::FocusedWorkspaceMode => {
                 send_command_to_miri_service(Command::Get {
                     get: MiriGet::FocusedWorkspaceMode,
-                });
+                })
+                .expect("Get commands require the miri service to be running. Run `miri service start` or setup the systemd user service");
+            }
+        }
+    }
+}
+
+impl CliRunner for MiriOverride {
+    async fn run(&self, mut niri_ipc: Socket) {
+        match send_command_to_miri_service(Command::Override {
+            override_action: self.clone(),
+        }) {
+            Ok(()) => {}
+            Err(_) => {
+                miri_overrides::scroll_passthrough(self.clone(), &mut niri_ipc);
             }
         }
     }
@@ -44,6 +63,7 @@ impl CliRunner for Command {
             },
             Command::Action { action } => action.run(niri_ipc).await,
             Command::Get { get } => get.run(niri_ipc).await,
+            Command::Override { override_action } => override_action.run(niri_ipc).await,
         }
     }
 }

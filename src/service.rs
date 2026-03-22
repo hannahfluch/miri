@@ -9,6 +9,7 @@ use crate::ipc::{Command, IPCMessage, IPCMessageContainer, MiriAction, MiriGet, 
 use crate::layout::handler::{
     force_workspace_windows_into_layout_mode, handle_workspace_gain_window, handle_workspace_lose_window,
 };
+use crate::miri_overrides::handle_override;
 use crate::miri_socket::MiriListener;
 use crate::niri_ipc_utils::get_windows_on_focused_workspace;
 use crate::niri_socket::NiriSocket;
@@ -23,6 +24,9 @@ impl CliRunner for Command {
             Command::Service { service_command: _ } => {}
             Command::Action { action } => action.run(action_socket, event_state, service_state),
             Command::Get { get } => get.run(action_socket, event_state, service_state),
+            Command::Override { override_action } => {
+                handle_override(override_action.clone(), action_socket, service_state)
+            }
         }
     }
 }

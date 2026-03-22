@@ -45,6 +45,10 @@ pub enum Command {
         #[command(subcommand)]
         get: MiriGet,
     },
+    Override {
+        #[command(subcommand)]
+        override_action: MiriOverride,
+    },
 }
 
 #[derive(Debug, Clone, Subcommand, Serialize, Deserialize)]
@@ -56,6 +60,21 @@ pub enum MiriServiceCommand {
 pub enum MiriAction {
     CycleFocusedWorkspaceMode,
     SetFocusedWorkspaceMode { mode: Mode },
+}
+
+#[derive(Debug, Clone, Subcommand, Serialize, Deserialize)]
+pub enum MiriOverride {
+    MoveColumnLeft,
+    MoveColumnRight,
+    MoveColumnToFirst,
+    MoveColumnToLast,
+    MoveColumnToMonitorUp,
+    MoveColumnToMonitorDown,
+    MoveColumnToMonitorLeft,
+    MoveColumnToMonitorRight,
+    MoveColumnToWorkspaceUp,
+    MoveColumnToWorkspaceDown,
+    MoveColumnToWorkspace { index: u8 },
 }
 
 #[derive(Debug, Subcommand, Serialize, Deserialize)]
@@ -91,22 +110,24 @@ impl Default for Mode {
     }
 }
 
-// send a command to the daemon
-pub fn send_command_to_miri_service(command: Command) {
-    match UnixStream::connect(MIRI_SOCKET_PATH) {
-        Ok(mut stream) => {
-            let container = IPCMessageContainer::new(IPCMessage::CliExecute(command));
-            let json = serde_json::to_string(&container).expect("Failed to serialize command");
-            let json_with_newline = format!("{}\n", json);
+#[derive(Debug)]
+pub enum MiriServiceError {
+    ConnectionFailed(String),
+    SerializationFailed,
+    SendFailed(String),
+}
 
-            if let Err(e) = stream.write_all(json_with_newline.as_bytes()) {
-                eprintln!("Failed to send command: {e}");
-                std::process::exit(1);
-            }
-        }
-        Err(e) => {
-            eprintln!("Failed to connect to miri service: {e}");
-            std::process::exit(1);
-        }
-    }
+pub fn send_command_to_miri_service(command: Command) -> Result<(), MiriServiceError> {
+    let mut stream =
+        UnixStream::connect(MIRI_SOCKET_PATH).map_err(|e| MiriServiceError::ConnectionFailed(e.to_string()))?;
+
+    let container = IPCMessageContainer::new(IPCMessage::CliExecute(command));
+    let json = serde_json::to_string(&container).map_err(|_| MiriServiceError::SerializationFailed)?;
+
+    let json_with_newline = format!("{}\n", json);
+    stream
+        .write_all(json_with_newline.as_bytes())
+        .map_err(|e| MiriServiceError::SendFailed(e.to_string()))?;
+
+    Ok(())
 }
