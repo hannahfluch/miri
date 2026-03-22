@@ -1,7 +1,7 @@
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::net::{UnixListener, UnixStream};
 
-use crate::ipc::MIRI_SOCKET_PATH;
+use crate::ipc::miri_socket_path;
 
 // TODO: this is an ai generated async socket reader. please redo this
 pub struct MiriListener {
@@ -14,8 +14,8 @@ pub struct MiriSocket {
 
 impl MiriListener {
     pub async fn bind() -> Self {
-        let _ = std::fs::remove_file(MIRI_SOCKET_PATH);
-        let listener = UnixListener::bind(MIRI_SOCKET_PATH).expect("Failed to bind miri socket");
+        let _ = std::fs::remove_file(miri_socket_path());
+        let listener = UnixListener::bind(miri_socket_path()).expect("Failed to bind miri socket");
         Self { listener }
     }
 

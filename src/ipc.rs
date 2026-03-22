@@ -3,7 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 
-pub const MIRI_SOCKET_PATH: &str = "/tmp/modal-niri.sock";
+use std::path::PathBuf;
+
+pub fn miri_socket_path() -> PathBuf {
+    let runtime_dir =
+        std::env::var("XDG_RUNTIME_DIR").expect("XDG_RUNTIME_DIR not set. Are you running in a Wayland session?");
+    PathBuf::from(runtime_dir).join("miri.sock")
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IPCMessageContainer {
@@ -119,7 +125,7 @@ pub enum MiriServiceError {
 
 pub fn send_command_to_miri_service(command: Command) -> Result<(), MiriServiceError> {
     let mut stream =
-        UnixStream::connect(MIRI_SOCKET_PATH).map_err(|e| MiriServiceError::ConnectionFailed(e.to_string()))?;
+        UnixStream::connect(miri_socket_path()).map_err(|e| MiriServiceError::ConnectionFailed(e.to_string()))?;
 
     let container = IPCMessageContainer::new(IPCMessage::CliExecute(command));
     let json = serde_json::to_string(&container).map_err(|_| MiriServiceError::SerializationFailed)?;
