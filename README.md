@@ -5,15 +5,17 @@ An extension to the [niri window manager](https://github.com/niri-wm/niri) to al
 https://github.com/user-attachments/assets/b415a86f-6775-40c6-8370-d418a5cf905b
 
 **Supported Layout Modes**
-- [x] Master *(in progress)*
-- [ ] Grid
-- [ ] Hybrid
-- [ ] Drag and Pan
-- ~~Dwindle~~ *(not planned)*
+| Mode         | Status        |
+| ------------ | ------------- |
+| Master       | 🟡 In Progress (usable)|
+| Grid         | 📋 Planned     |
+| Hybrid       | 📋 Planned     |
+| Drag and Pan | 📋 Planned     |
+| Dwindle      | ❌ Not Planned |
 
 Other than adding more layout modes, I'd like to make a DMS plugin for the bar which shows the current mode of the current workspace on that output
 > [!WARNING]
-> This project is in development. **There will be bugs**, so if you find anything, please feel free to report it or submit a pull request. Master layout mode is currently in a usable state but there are certain edge cases which need to be ironed out
+> This project is in development. **There will be bugs**! Master layout is usable, but rough edges remain. Issues and PRs welcome!
 
 ## Install
 Run the install script from the latest release and follow the instructions
@@ -33,7 +35,7 @@ Example:
 ## Overrides setup
 Now it's time to setup the overrides!
 > [!IMPORTANT]
-> If you intend to use miri with the systemd user service (recommended) please follow these steps to ensure a consistent experience in other layout modes. For scroll mode (or if the miri service is not running), these overrides behave identical to vanilla niri. If you only want to use the miri cli for actions, you can skip this section entirely
+> Skip this section if you only use the miri CLI. Required if you're using the miri service
 
 1. Go to your niri config `~/.config/niri/config.kdl`
 2. Add or replace these keybinds with their equivalent miri override:
